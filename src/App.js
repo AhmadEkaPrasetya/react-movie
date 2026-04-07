@@ -54,40 +54,51 @@ const KEY = "2d542b96";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
+  const [query, setQuery] = useState("avengers");
   const [watched, setWatched] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const query = "avengers";
+  const tempQuery = "avengers";
 
-  useEffect(function () {
-    async function fetchMovies() {
-      try {
-        setIsLoading(true);
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-        );
+  useEffect(
+    function () {
+      async function fetchMovies() {
+        try {
+          setIsLoading(true);
+          setError("");
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+          );
 
-        if (!res.ok) throw new Error("Lost Internet...");
+          if (!res.ok) throw new Error("Lost Internet...");
 
-        const data = await res.json();
-        if (data.Response === "False") throw new Error("movie not found");
+          const data = await res.json();
+          if (data.Response === "False") throw new Error("movie not found");
 
-        setMovies(data.Search);
-        console.log(data.Search);
-      } catch (err) {
-        console.log(err.message);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+          setMovies(data.Search);
+          console.log(data.Search);
+        } catch (err) {
+          console.log(err.message);
+          setError(err.message);
+        } finally {
+          setIsLoading(false);
+        }
+
+        if (query.lenght < 3) {
+          setMovies([]);
+          setError("");
+          return;
+        }
       }
-    }
-    fetchMovies();
-  }, []);
+      fetchMovies();
+    },
+    [query]
+  );
 
   return (
     <>
       <NavBar>
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <NumResult movies={movies} />
       </NavBar>
 
@@ -133,8 +144,7 @@ function Logo() {
   );
 }
 
-function Search() {
-  const [query, setQuery] = useState("");
+function Search({ query, setQuery }) {
   return (
     <input
       className="search"
