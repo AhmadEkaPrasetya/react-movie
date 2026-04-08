@@ -58,7 +58,15 @@ export default function App() {
   const [watched, setWatched] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const tempQuery = "avengers";
+  const [selectedID, setSelectedId] = useState();
+
+  function handleSelectMovie(id) {
+    setSelectedId((selectedID) => (id === selectedID ? null : id));
+  }
+
+  function handleCloseMovie() {
+    setSelectedId(null);
+  }
 
   useEffect(
     function () {
@@ -107,11 +115,22 @@ export default function App() {
          */}
 
         {isLoading && <Loader />}
-        {!error && !isLoading && <MovieList movies={movies} />}
+        {!error && !isLoading && (
+          <MovieList movies={movies} onSelectMovies={handleSelectMovie} />
+        )}
         {error && <ErrorMessage message={error} />}
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedMovieList watched={watched} />
+          {selectedID ? (
+            <MovieDetails
+              selectedID={selectedID}
+              onCloseMovies={handleCloseMovie}
+            />
+          ) : (
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedMovieList watched={watched} />
+            </>
+          )}
         </Box>
       </Main>
     </>
@@ -183,7 +202,6 @@ function Box({ children }) {
 
 /*
 function WatchedBox() {
-  const [watched, setWatched] = useState(tempWatchedData);
   const [isOpen2, setIsOpen2] = useState(true);
 
   return (
@@ -202,21 +220,27 @@ function WatchedBox() {
       )}
     </div>
   );
-} */
+} 
+  */
 
-function MovieList({ movies }) {
+function MovieList({ movies, onSelectMovies }) {
   return (
-    <ul className="list">
+    <ul className="list  list-movies">
       {movies?.map((movie) => (
-        <Movie movie={movie} key={movie.imdbID} movies={movies} />
+        <Movie
+          movie={movie}
+          key={movie.imdbID}
+          movies={movies}
+          onSelectMovies={onSelectMovies}
+        />
       ))}
     </ul>
   );
 }
 
-function Movie({ movie }) {
+function Movie({ movie, onSelectMovies }) {
   return (
-    <li>
+    <li onClick={() => onSelectMovies(movie.imdbID)}>
       <img src={movie.Poster} alt={`${movie.Title} poster`} />
       <h3>{movie.Title}</h3>
       <div>
@@ -226,6 +250,17 @@ function Movie({ movie }) {
         </p>
       </div>
     </li>
+  );
+}
+
+function MovieDetails({ selectedID, onCloseMovies }) {
+  return (
+    <div className="details">
+      <button className="btn-back" onClick={onCloseMovies}>
+        &larr;
+      </button>
+      {selectedID}
+    </div>
   );
 }
 
