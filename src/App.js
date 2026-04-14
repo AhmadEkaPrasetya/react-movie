@@ -55,7 +55,7 @@ const KEY = "2d542b96";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
-  const [query, setQuery] = useState("avengers");
+  const [query, setQuery] = useState("");
   const [watched, setWatched] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -77,40 +77,47 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  useEffect(
-    function () {
-      async function fetchMovies() {
-        try {
-          setIsLoading(true);
-          setError("");
-          const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-          );
+  useEffect(() => {
+    const controller = new AbortController();
 
-          if (!res.ok) throw new Error("Lost Internet...");
+    async function fetchMovies() {
+      try {
+        setIsLoading(true);
+        setError("");
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+          { signal: controller.signal }
+        );
 
-          const data = await res.json();
-          if (data.Response === "False") throw new Error("movie not found");
+        if (!res.ok) throw new Error("Lost Internet...");
 
-          setMovies(data.Search);
-          console.log(data.Search);
-        } catch (err) {
+        const data = await res.json();
+        if (data.Response === "False") throw new Error("movie not found");
+
+        setMovies(data.Search);
+        setError("");
+      } catch (err) {
+        if (err.name !== "AbortError") {
           console.log(err.message);
           setError(err.message);
-        } finally {
-          setIsLoading(false);
         }
-
-        if (query.lenght < 3) {
-          setMovies([]);
-          setError("");
-          return;
-        }
+      } finally {
+        setIsLoading(false);
       }
-      fetchMovies();
-    },
-    [query]
-  );
+
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+    }
+    handleCloseMovie();
+    fetchMovies();
+
+    return function () {
+      controller.abort();
+    };
+  }, [query]);
 
   return (
     <>
@@ -122,12 +129,13 @@ export default function App() {
       <Main>
         {/* <Box>{isloading ? <Loader /> : <MovieList movies={movies} />}</Box>
          */}
-
-        {isLoading && <Loader />}
-        {!error && !isLoading && (
-          <MovieList movies={movies} onSelectMovies={handleSelectMovie} />
-        )}
-        {error && <ErrorMessage message={error} />}
+        <Box>
+          {isLoading && <Loader />}
+          {!error && !isLoading && (
+            <MovieList movies={movies} onSelectMovies={handleSelectMovie} />
+          )}
+          {error && <ErrorMessage message={error} />}
+        </Box>
         <Box>
           {selectedId ? (
             <MovieDetails
@@ -305,26 +313,43 @@ function MovieDetails({ selectedId, onCloseMovies, onAddMovies, watched }) {
     onCloseMovies();
   }
 
-  useEffect(
-    function () {
-      async function getMovieDetails() {
-        setIsLoading(true);
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
-        );
-        const data = await res.json();
-        setMovie(data);
+  useEffect(() => {
+    function callback(e) {
+      if (e.code === "Escape") {
+        onCloseMovies();
       }
-      getMovieDetails();
-      setIsLoading(false);
-    },
-    [selectedId]
-  );
+    }
+
+    document.addEventListener("keydown", callback);
+
+    return function () {
+      document.removeEventListener("keydown", callback);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function getMovieDetails() {
+      setIsLoading(true);
+      const res = await fetch(
+        `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
+      );
+      const data = await res.json();
+      setMovie(data);
+    }
+    getMovieDetails();
+    setIsLoading(false);
+  }, [selectedId]);
 
   useEffect(
     function () {
       if (!title) return;
       document.title = `Movie | ${title}`;
+
+      return function () {
+        if (!title) return;
+        document.title = "Layar - layaran";
+        //console.log(`Clean up effect for movie ${title}`);
+      };
     },
     [title]
   );
